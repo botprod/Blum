@@ -2,7 +2,8 @@
 API_ID = 1488
 API_HASH = 'abcde1488'
 
-REF_LINK = 'https://t.me/BlumCryptoBot/app?startapp=ref_GY2Vsk7swg'
+# Insert your ref link here
+REF_LINK = 'https://t.me/BlumCryptoBot/app?startapp=ref_QlQl380NRu'
 
 DELAYS = {
     'ACCOUNT': [5, 15],  # delay between connections to accounts (the more accounts, the longer the delay)
