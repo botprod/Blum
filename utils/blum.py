@@ -58,7 +58,16 @@ class BlumBot:
             lang_code='ru'
         )
 
-        headers = {'User-Agent': UserAgent(os='android').random}
+        headers = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-language': 'ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7',
+            'origin': 'https://telegram.blum.codes',
+            'priority': 'u=1, i',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-site',
+            'user-agent': UserAgent(os='android').random,
+            }
         self.session = aiohttp.ClientSession(headers=headers, trust_env=True, connector=connector,
                                             timeout=aiohttp.ClientTimeout(120))
 
@@ -170,7 +179,7 @@ class BlumBot:
                 continue
 
             logger.info(f"Thread {self.thread} | {self.account} | Start play in game! GameId: {game_id}")
-            await asyncio.sleep(37)
+            await asyncio.sleep(random.uniform(*config.DELAYS['GAME']))
 
             msg, points = await self.claim_game(game_id)
             if isinstance(msg, bool) and msg:
@@ -189,7 +198,10 @@ class BlumBot:
 
     async def start_game(self):
         resp = await self.session.post("https://game-domain.blum.codes/api/v1/game/play")
-        return (await resp.json()).get("gameId")
+        if resp.status == 502:
+            return (await resp.json()).get("gameId")
+        else:
+            return False
 
     async def claim_game(self, game_id: str):
         points = random.randint(*config.POINTS)
@@ -233,7 +245,18 @@ class BlumBot:
 
         json_data = {"query": query, "referralToken": self.ref_token}
 
-        resp = await self.session.post("https://gateway.blum.codes/v1/auth/provider/PROVIDER_TELEGRAM_MINI_APP", json=json_data)
+        await self.session.options("https://gateway.blum.codes/v1/auth/provider/PROVIDER_TELEGRAM_MINI_APP")
+
+        while True:
+            resp = await self.session.post("https://gateway.blum.codes/v1/auth/provider/PROVIDER_TELEGRAM_MINI_APP", json=json_data)
+
+            if resp.status == 520:
+                logger.warning(f"Thread {self.thread} | {self.account} | Relogin...")
+                await asyncio.sleep(10)
+                continue
+            else:
+                break
+
         resp_json = await resp.json()
 
         if resp_json.get('justCreated'):

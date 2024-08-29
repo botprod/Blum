@@ -31,8 +31,9 @@ async def start(thread: int, session_name: str, phone_number: str, proxy: [str, 
             await blum.friend_claim()
             await sleep(uniform(2, 8))
 
-            await blum.play_game()
-            await sleep(uniform(5, 8))
+            if config.PLAY_GAME:
+                await blum.play_game()
+                await sleep(uniform(5, 8))
 
             await blum.tasks()
             await sleep(uniform(5, 8))
