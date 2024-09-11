@@ -6,11 +6,14 @@ API_HASH = 'botprod!'
 REF_LINK = 'https://t.me/BlumCryptoBot/app?startapp=ref_QlQl380NRu'
 
 DELAYS = {
+    "RELOGIN": [5, 7],  # delay after a login attempt
     'ACCOUNT': [5, 15],  # delay between connections to accounts (the more accounts, the longer the delay)
     'PLAY': [5, 15],   # delay between play in seconds
     'ERROR_PLAY': [5, 8],    # delay between errors in the game in seconds
     'CLAIM': [600, 1800],   # delay in seconds before claim points every 8 hours
-    'GAME': [35, 37]  # delay after the start of the game
+    'GAME': [35, 37],  # delay after the start of the game
+    'TASK_COMPLETE': [2, 3],  # delay after completed the task
+    'TASK_ACTION': [5, 10]  # delay after start task
 }
 
 # if you need play in the game
@@ -19,7 +22,9 @@ PLAY_GAME = True
 # points with each play game; max 280
 POINTS = [240, 280]
 
-BLACKLIST_TASK = ['Subscribe to Blum Telegram', 'Join $PARK on SOL', "Join OFFSET's $CLOUT", 'Join $RACE Game', 'Join or create tribe', 'Meet Blum Wallet', 'What are NFTs?', 'USDT or USDC?', 'BTC is volatile. Why?']
+
+BLACKLIST_TASK = ['Join or create tribe']
+
 
 PROXY = {
     "USE_PROXY_FROM_FILE": False,  # True - if use proxy from file, False - if use proxy from accounts.json

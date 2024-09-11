@@ -15,7 +15,20 @@ async def start(thread: int, session_name: str, phone_number: str, proxy: [str, 
     account = session_name + '.session'
 
     await sleep(uniform(*config.DELAYS['ACCOUNT']))
-    if await blum.login() is None:
+
+    attempts = 3
+    while attempts:
+        try:
+            await blum.login()
+            logger.success(f"Thread {thread} | {account} | Login")
+            break
+        except Exception as e:
+            logger.error(f"Thread {thread} | {account} | Left login attempts: {attempts}, error: {e}")
+            await asyncio.sleep(uniform(*config.DELAYS['RELOGIN']))
+            attempts -= 1
+    else:
+        logger.error(f"Thread {thread} | {account} | Couldn't login")
+        await blum.logout()
         return
 
     while True:

@@ -72,16 +72,16 @@ class BlumBot:
                                             timeout=aiohttp.ClientTimeout(120))
 
     async def need_new_login(self):
-        if (await self.session.get("https://gateway.blum.codes/v1/user/me")).status == 200:
+        if (await self.session.get("https://user-domain.blum.codes/api/v1/user/me")).status == 200:
             return False
         else:
             return True
 
     @retry_async()
     async def friend_claim(self):
-        r = await (await self.session.get('https://gateway.blum.codes/v1/friends/balance')).json()
+        r = await (await self.session.get('https://user-domain.blum.codes/api/v1/friends/balance')).json()
         if r.get('amountForClaim') is not None and float(r.get('amountForClaim')) and r.get('canClaim'):
-            resp = await self.session.post("https://gateway.blum.codes/v1/friends/claim")
+            resp = await self.session.post("https://user-domain.blum.codes/api/v1/friends/claim")
             claim_balance = (await resp.json()).get("claimBalance")
             logger.success(f"Thread {self.thread} | {self.account} | Claim friends reward: {claim_balance}")
 
@@ -98,13 +98,13 @@ class BlumBot:
 
         await asyncio.sleep(random.uniform(5, 7))
 
-        r = await (await self.session.get("https://gateway.blum.codes/v1/friends/balance")).json()
+        r = await (await self.session.get("https://user-domain.blum.codes/api/v1/friends/balance")).json()
         referral_token = r.get('referralToken')
         referral_link = 't.me/BlumCryptoBot/app?startapp=ref_' + referral_token if referral_token else '-'
 
         await asyncio.sleep(random.uniform(5, 7))
 
-        r = await (await self.session.get("https://gateway.blum.codes/v1/friends?pageSize=1000")).json()
+        r = await (await self.session.get("https://user-domain.blum.codes/api/v1/friends?pageSize=1000")).json()
         referrals = len(r.get('friends'))
 
         await self.logout()
@@ -136,34 +136,53 @@ class BlumBot:
 
     @retry_async()
     async def tasks(self):
-        for task in await self.get_tasks():
-            if task['status'] == 'FINISHED' or task['title'] in config.BLACKLIST_TASK: continue
+        sub_sections = await self.get_tasks()
 
-            if task['kind'] in ['INITIAL', 'ONGOING']:
-                await self.handle_task(task)
+        for sub_section in sub_sections:
+            if sub_section.get('title') in ['Farming', 'Frens']:
+                for task in sub_section.get('tasks'):
+                    if task['title'] in config.BLACKLIST_TASK: continue
 
-            elif task['kind'] == 'QUEST':
-                for subtask in task['subTasks']:
-                    if task['status'] == 'FINISHED' or subtask['title'] in config.BLACKLIST_TASK: continue
-                    if subtask['kind'] == 'INITIAL':
-                        await self.handle_task(subtask)
+                    if task['status'] == 'READY_FOR_CLAIM':
+                        await self.claim_task(task, sub_section)
 
-    async def claim_task(self, task: dict):
+            if sub_section.get('title') in ['Academy', 'Socials']:
+                for task in sub_section.get('tasks'):
+                    if task['title'] in config.BLACKLIST_TASK: continue
+
+                    if task['status'] == 'READY_FOR_CLAIM':
+                        await self.claim_task(task, sub_section)
+
+                    if task['status'] == 'NOT_STARTED':
+                        if await self.start_complete_task(task, sub_section):
+                            await self.claim_task(task, sub_section)
+
+    async def claim_task(self, task: dict, sub_section: dict):
         resp = await self.session.post(f'https://game-domain.blum.codes/api/v1/tasks/{task["id"]}/claim')
-        return (await resp.json()).get('status') == "FINISHED"
+        await asyncio.sleep(random.uniform(*config.DELAYS['TASK_COMPLETE']))
 
-    async def start_complete_task(self, task: dict):
+        if (await resp.json()).get('status') == "FINISHED":
+            logger.success(f"Thread {self.thread} | {self.account} | Completed task «{task['title']}» in category «{sub_section['title']}» and got {task['reward']} BP ")
+            return True
+        else:
+            logger.error(f"Thread {self.thread} | {self.account} | Failed complete task «{task['title']}» in category «{sub_section['title']}»")
+            return False
+
+    async def start_complete_task(self, task: dict, sub_section: dict):
         resp = await self.session.post(f'https://game-domain.blum.codes/api/v1/tasks/{task["id"]}/start')
+        await asyncio.sleep(random.uniform(*config.DELAYS['TASK_ACTION']))
+
+        if (await resp.json()).get('status') == "STARTED":
+            logger.info(f"Thread {self.thread} | {self.account} | Start complete task «{task['title']}» in category «{sub_section['title']}»")
+            return True
+        else:
+            logger.error(f"Thread {self.thread} | {self.account} | Failed complete task «{task['title']}» in category «{sub_section['title']}»")
+            return False
 
     async def get_tasks(self):
         resp = await self.session.get('https://game-domain.blum.codes/api/v1/tasks')
 
-        tasks = []
-        for task_group in await resp.json():
-            for task in task_group['tasks']:
-                tasks.append(task)
-
-        return tasks
+        return (await resp.json())[0].get('subSections')
 
     async def play_game(self):
         timestamp, start_time, end_time, play_passes = await self.balance()
@@ -196,7 +215,7 @@ class BlumBot:
         if await resp.text() == 'OK':
             logger.success(f"Thread {self.thread} | {self.account} | Claimed daily reward!")
 
-    async def start_game(self):
+    async def start_game(self) -> [str, bool]:
         resp = await self.session.post("https://game-domain.blum.codes/api/v1/game/play")
         if resp.status == 200:
             return (await resp.json()).get("gameId")
@@ -248,7 +267,7 @@ class BlumBot:
         # await self.session.options("https://gateway.blum.codes/v1/auth/provider/PROVIDER_TELEGRAM_MINI_APP")
 
         while True:
-            resp = await self.session.post("https://gateway.blum.codes/v1/auth/provider/PROVIDER_TELEGRAM_MINI_APP", json=json_data)
+
 
             if resp.status == 520:
                 logger.warning(f"Thread {self.thread} | {self.account} | Relogin...")
