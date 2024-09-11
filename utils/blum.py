@@ -14,6 +14,7 @@ from fake_useragent import UserAgent
 from aiohttp_socks import ProxyConnector
 from faker import Faker
 
+
 def retry_async(max_retries=2):
     def decorator(func):
         async def wrapper(*args, **kwargs):
@@ -28,7 +29,9 @@ def retry_async(max_retries=2):
                     await asyncio.sleep(10)
                     if retries >= max_retries:
                         break
+
         return wrapper
+
     return decorator
 
 
@@ -57,7 +60,6 @@ class BlumBot:
             proxy=proxy,
             lang_code='ru'
         )
-
         headers = {
             'accept': 'application/json, text/plain, */*',
             'accept-language': 'ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7',
@@ -67,9 +69,9 @@ class BlumBot:
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-site',
             'user-agent': UserAgent(os='android').random,
-            }
+        }
         self.session = aiohttp.ClientSession(headers=headers, trust_env=True, connector=connector,
-                                            timeout=aiohttp.ClientTimeout(120))
+                                             timeout=aiohttp.ClientTimeout(120))
 
     async def need_new_login(self):
         if (await self.session.get("https://user-domain.blum.codes/api/v1/user/me")).status == 200:
@@ -162,10 +164,12 @@ class BlumBot:
         await asyncio.sleep(random.uniform(*config.DELAYS['TASK_COMPLETE']))
 
         if (await resp.json()).get('status') == "FINISHED":
-            logger.success(f"Thread {self.thread} | {self.account} | Completed task «{task['title']}» in category «{sub_section['title']}» and got {task['reward']} BP ")
+            logger.success(
+                f"Thread {self.thread} | {self.account} | Completed task «{task['title']}» in category «{sub_section['title']}» and got {task['reward']} BP ")
             return True
         else:
-            logger.error(f"Thread {self.thread} | {self.account} | Failed complete task «{task['title']}» in category «{sub_section['title']}»")
+            logger.error(
+                f"Thread {self.thread} | {self.account} | Failed complete task «{task['title']}» in category «{sub_section['title']}»")
             return False
 
     async def start_complete_task(self, task: dict, sub_section: dict):
@@ -173,10 +177,12 @@ class BlumBot:
         await asyncio.sleep(random.uniform(*config.DELAYS['TASK_ACTION']))
 
         if (await resp.json()).get('status') == "STARTED":
-            logger.info(f"Thread {self.thread} | {self.account} | Start complete task «{task['title']}» in category «{sub_section['title']}»")
+            logger.info(
+                f"Thread {self.thread} | {self.account} | Start complete task «{task['title']}» in category «{sub_section['title']}»")
             return True
         else:
-            logger.error(f"Thread {self.thread} | {self.account} | Failed complete task «{task['title']}» in category «{sub_section['title']}»")
+            logger.error(
+                f"Thread {self.thread} | {self.account} | Failed complete task «{task['title']}» in category «{sub_section['title']}»")
             return False
 
     async def get_tasks(self):
@@ -235,7 +241,7 @@ class BlumBot:
         resp = await self.session.post("https://game-domain.blum.codes/api/v1/farming/claim")
         resp_json = await resp.json()
 
-        return int(resp_json.get("timestamp")/1000), resp_json.get("availableBalance")
+        return int(resp_json.get("timestamp") / 1000), resp_json.get("availableBalance")
 
     async def start(self):
         resp = await self.session.post("https://game-domain.blum.codes/api/v1/farming/start")
@@ -250,8 +256,8 @@ class BlumBot:
             start_time = resp_json.get("farming").get("startTime")
             end_time = resp_json.get("farming").get("endTime")
 
-            return int(timestamp/1000), int(start_time/1000), int(end_time/1000), resp_json.get("playPasses")
-        return int(timestamp/1000), None, None, resp_json.get("playPasses")
+            return int(timestamp / 1000), int(start_time / 1000), int(end_time / 1000), resp_json.get("playPasses")
+        return int(timestamp / 1000), None, None, resp_json.get("playPasses")
 
     async def login(self):
         self.session.headers.pop('Authorization', None)
@@ -267,7 +273,8 @@ class BlumBot:
         # await self.session.options("https://gateway.blum.codes/v1/auth/provider/PROVIDER_TELEGRAM_MINI_APP")
 
         while True:
-
+            resp = await self.session.post(
+                "https://user-domain.blum.codes/api/v1/auth/provider/PROVIDER_TELEGRAM_MINI_APP", json=json_data)
 
             if resp.status == 520:
                 logger.warning(f"Thread {self.thread} | {self.account} | Relogin...")
@@ -290,7 +297,8 @@ class BlumBot:
 
             if not (await self.client.get_me()).username:
                 while True:
-                    username = Faker('en_US').name().replace(" ", "") + '_' + ''.join(random.choices(string.digits, k=random.randint(3, 6)))
+                    username = Faker('en_US').name().replace(" ", "") + '_' + ''.join(
+                        random.choices(string.digits, k=random.randint(3, 6)))
                     if await self.client.set_username(username):
                         logger.success(f"Thread {self.thread} | {self.account} | Set username @{username}")
                         break
